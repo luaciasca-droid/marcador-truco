@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Truco">
+<meta name="theme-color" content="#0f2a1d">
+<title>Marcador de Truco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt:#0f2a1d; --felt2:#143826; --ink:#f4ecd8; --muted:#a9b8a6;
+    --red:#e2483d; --gold:#e8b84a; --card:#fbf6ea; --line:rgba(244,236,216,.14);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--felt);color:var(--ink);
+    font-family:Inter,system-ui,sans-serif;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+  body{
+    background:radial-gradient(120% 80% at 50% 0%, var(--felt2), var(--felt) 70%);
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex;flex-direction:column;min-height:100dvh
+  }
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px;gap:8px}
+  .logo{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:2px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .logo span{color:var(--red)}
+  .icon-btn{background:none;border:1px solid var(--line);color:var(--ink);border-radius:12px;
+    height:38px;min-width:38px;padding:0 11px;font:600 13px Inter;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+  .icon-btn:active{background:rgba(255,255,255,.08)}
+  .icon-btn:disabled{opacity:.35}
+  .hdr-right{display:flex;gap:6px}
+
+  .tabs{display:flex;margin:4px 16px 0;background:rgba(0,0,0,.25);border-radius:14px;padding:4px}
+  .tabs button{flex:1;height:36px;border:none;border-radius:10px;background:none;color:var(--muted);font:700 14px Inter;cursor:pointer}
+  .tabs button.on{background:var(--card);color:#1c1608}
+
+  #banner{margin:8px 16px 0;padding:10px 14px;border-radius:12px;background:var(--gold);color:#2a1f05;
+    font-weight:800;text-align:center;font-size:14px;letter-spacing:.3px;display:none}
+  #banner.show{display:block;animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{transform:scale(1.02)}}
+
+  .view{display:none;flex:1;flex-direction:column}
+  .view.on{display:flex}
+
+  #board{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px}
+  .team{background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:22px;
+    display:flex;flex-direction:column;align-items:center;padding:10px 8px 10px;position:relative;overflow:hidden}
+  .team.lead{border-color:rgba(232,184,74,.55)}
+  .pick{width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(244,236,216,.3);border-radius:12px;
+    color:var(--ink);padding:7px 4px;cursor:pointer;font:800 14px Inter;letter-spacing:.4px;line-height:1.25}
+  .pick small{display:block;font:600 10px Inter;color:var(--muted);letter-spacing:.6px;margin-top:2px}
+  .pick:active{background:rgba(255,255,255,.12)}
+  .h2h{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px}
+  .h2h b{color:var(--gold)}
+  .score-tap{flex:1;width:100%;border:none;background:none;color:var(--ink);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 0;border-radius:16px}
+  .score-tap:active{background:rgba(255,255,255,.05)}
+  .score{font-family:"Bebas Neue",sans-serif;font-size:min(32vw,170px);line-height:.85;transition:transform .15s}
+  .score.bump{transform:scale(1.12)}
+  .hint{font-size:11px;color:var(--muted);letter-spacing:.5px}
+  .sticks{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;min-height:28px;margin:2px 0 8px}
+  .sticks svg{width:24px;height:24px}
+  .btns{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;width:100%}
+  .btn{border:none;border-radius:14px;height:48px;font:800 17px Inter;cursor:pointer;color:#1c1608;background:var(--card)}
+  .btn:active{transform:scale(.96)}
+  .btn.t3{background:var(--red);color:#fff}
+  .btn.t6{background:#c4362c;color:#fff}
+  .btn.t9{background:#9e2a22;color:#fff}
+  .btn.t12{background:var(--gold)}
+  .btn.minus{background:transparent;color:var(--muted);border:1px solid var(--line);grid-column:span 2;height:36px;font-size:14px}
+  .btn small{display:block;font-size:10px;font-weight:600;opacity:.8;margin-top:1px;letter-spacing:.4px}
+  .gamebar{display:flex;gap:8px;padding:0 12px 12px}
+  .gamebar .icon-btn{flex:1;height:42px}
+
+  /* Ranking */
+  #rank{padding:12px 16px 20px;gap:14px;overflow-y:auto}
+  .panel{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:20px;padding:14px}
+  .panel h3{margin:0 0 10px;font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:1.5px;font-weight:400;display:flex;justify-content:space-between;align-items:baseline}
+  .panel h3 small{font:600 12px Inter;color:var(--muted);letter-spacing:0}
+  .row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+  .row:first-of-type{border-top:none}
+  .pos{font-family:"Bebas Neue",sans-serif;font-size:24px;color:var(--muted);text-align:center}
+  .row.first .pos{color:var(--gold)}
+  .who{font-weight:800;font-size:16px}
+  .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.08);margin-top:6px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--red);border-radius:4px}
+  .row.first .bar i{background:var(--gold)}
+  .stat{text-align:right;font-size:13px;color:var(--muted);line-height:1.35}
+  .stat b{color:var(--ink);font-size:17px}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 4px}
+  .match{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+  .match:first-of-type{border-top:none}
+  .match .m{flex:1;line-height:1.4}
+  .match .w{color:var(--gold);font-weight:800}
+  .match .l{color:var(--muted)}
+  .match .d{font-size:11px;color:var(--muted)}
+  .del{background:none;border:1px solid var(--line);color:var(--muted);border-radius:10px;width:32px;height:32px;cursor:pointer;font-size:16px}
+  .status{font-size:12px;color:var(--muted);text-align:center;padding:2px 0 0}
+  .status.warn{color:var(--gold)}
+
+  /* Modals */
+  .modal{position:fixed;inset:0;background:rgba(5,15,10,.78);display:none;align-items:center;justify-content:center;padding:22px;z-index:10;backdrop-filter:blur(4px)}
+  .modal.show{display:flex}
+  .sheet{background:var(--card);color:#1c1608;border-radius:24px;padding:24px 20px 18px;width:100%;max-width:380px;text-align:center;
+    animation:pop .35s cubic-bezier(.2,1.4,.4,1);max-height:90dvh;overflow-y:auto}
+  @keyframes pop{from{transform:scale(.7);opacity:0}}
+  .sheet h2{font-family:"Bebas Neue",sans-serif;font-size:42px;margin:4px 0 2px;letter-spacing:1px;line-height:1;font-weight:400}
+  .sheet p{margin:6px 0 16px;color:#5b5240;font-size:15px}
+  .sheet .suit{font-size:36px;color:var(--red)}
+  .sheet .actions{display:flex;gap:10px}
+  .sheet .actions.col{flex-direction:column}
+  .sheet button.b{flex:1;min-height:50px;border-radius:14px;border:none;font:800 15px Inter;cursor:pointer}
+  .primary{background:var(--felt);color:var(--ink)}
+  .ghost{background:#ece4d0;color:#1c1608}
+  .danger{background:#f3d3cf;color:#8a1f17}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:4px 0 16px}
+  .chip{border:2px solid #d9cfb6;background:#fff;border-radius:999px;padding:10px 16px;font:800 15px Inter;cursor:pointer;color:#1c1608}
+  .chip.on{background:var(--felt);border-color:var(--felt);color:var(--ink)}
+  .chip:disabled{opacity:.35}
+  .chip small{font-weight:600;font-size:11px;opacity:.7;margin-left:4px}
+  .addrow{display:flex;gap:8px;margin:-4px 0 16px}
+  .addrow input{flex:1;min-width:0;height:44px;border-radius:12px;border:2px solid #d9cfb6;padding:0 12px;font:600 15px Inter;user-select:text;-webkit-user-select:text}
+  .addrow button{height:44px;border:none;border-radius:12px;padding:0 14px;font:800 14px Inter;background:#ece4d0;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">♠ TRUCO <span>♥</span></div>
+  <div class="hdr-right">
+    <button class="icon-btn" id="undo" aria-label="Desfazer">↶ Desfazer</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button id="tabGame" class="on">Partida</button>
+  <button id="tabRank">Ranking</button>
+</nav>
+
+<section class="view on" id="vGame">
+  <div id="banner"></div>
+  <div id="board"></div>
+  <div class="gamebar">
+    <button class="icon-btn" id="shuffle">🔀 Sortear duplas</button>
+    <button class="icon-btn" id="resetGame">↺ Zerar partida</button>
+  </div>
+</section>
+
+<section class="view" id="vRank">
+  <div id="rank" style="display:flex;flex-direction:column"></div>
+</section>
+
+<!-- Vitória -->
+<div class="modal" id="winModal">
+  <div class="sheet">
+    <div class="suit">♣ ♥ ♠ ♦</div>
+    <h2 id="winTitle"></h2>
+    <p id="winText"></p>
+    <div class="actions">
+      <button class="b ghost" id="winUndo">Desfazer</button>
+      <button class="b primary" id="winNext">Nova partida</button>
+    </div>
+  </div>
+</div>
+
+<!-- Escolher dupla -->
+<div class="modal" id="pickModal">
+  <div class="sheet">
+    <h2 id="pickTitle">Escolher dupla</h2>
+    <p>Toque em dois jogadores</p>
+    <div class="chips" id="chips"></div>
+    <div class="addrow">
+      <input id="newName" placeholder="Novo jogador" maxlength="14">
+      <button id="addBtn">Adicionar</button>
+    </div>
+    <div class="actions"><button class="b primary" id="pickDone">Pronto</button></div>
+  </div>
+</div>
+
+<!-- Confirmar -->
+<div class="modal" id="confModal">
+  <div class="sheet">
+    <h2 id="confTitle"></h2>
+    <p id="confText"></p>
+    <div class="actions">
+      <button class="b ghost" id="confNo">Cancelar</button>
+      <button class="b danger" id="confYes">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MAX = 12;
+const KEY = 'truco-marcador-v2';
+const DEFAULT_PLAYERS = ['Lua','Vinicius','Victor','Julia'];
+
+// ---------- estado local da partida em andamento ----------
+let game = { teams:[['Lua','Vinicius'],['Victor','Julia']], score:[0,0] };
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.teams && s.score) game = s; } catch(e){}
+function saveGame(){ try{ localStorage.setItem(KEY, JSON.stringify(game)); }catch(e){} }
+let history = [];
+function snap(){ history.push(JSON.stringify(game)); if(history.length>100) history.shift(); }
+function buzz(ms){ try{ navigator.vibrate && navigator.vibrate(ms); }catch(e){} }
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pairKey = t => [...t].sort((a,b)=>a.localeCompare(b)).join(' & ');
+const teamLabel = t => t.length ? t.join(' & ') : 'Escolher dupla';
+
+// ---------- dados compartilhados (ranking) ----------
+let players = [...DEFAULT_PLAYERS];
+let matches = [];          // {id, a:[..], b:[..], sa, sb, winner:0|1, ts}
+let db = null;
+let dbState = 'loading';   // loading | ok | local | slow
+const LOCAL_MATCHES = 'truco-partidas-local';
+
+function loadLocalMatches(){
+  try{ const m = JSON.parse(localStorage.getItem(LOCAL_MATCHES)); if(Array.isArray(m)) matches=m; }catch(e){}
+  try{ const p = JSON.parse(localStorage.getItem('truco-jogadores-local')); if(Array.isArray(p)&&p.length) players=p; }catch(e){}
+}
+function saveLocalMatches(){
+  try{ localStorage.setItem(LOCAL_MATCHES, JSON.stringify(matches)); }catch(e){}
+  try{ localStorage.setItem('truco-jogadores-local', JSON.stringify(players)); }catch(e){}
+}
+
+// ---------- nuvem: Firebase (GitHub Pages) ou db do Claude ----------
+// Preencha com a configuração do seu projeto Firebase.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAsTA3mKl0Qw5PFNagLE9Om1CSfkrvjCeE",
+  authDomain: "marcador-truco-4d3ba.firebaseapp.com",
+  projectId: "marcador-truco-4d3ba",
+  storageBucket: "marcador-truco-4d3ba.firebasestorage.app",
+  messagingSenderId: "149565987105",
+  appId: "1:149565987105:web:e5cd77184a08bfacfbc660"
+};
+const FB_VER = '10.12.2';
+
+// Adaptador comum: watchMatches(cb, err), watchPlayers(cb), add(body)->id, del(id), setPlayers(list)
+async function firebaseAdapter(){
+  const app = await import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app.js`);
+  const F = await import(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-firestore.js`);
+  const fs = F.getFirestore(app.initializeApp(FIREBASE_CONFIG));
+  const col = F.collection(fs,'matches');
+  return {
+    watchMatches:(cb,err)=>F.onSnapshot(F.query(col,F.orderBy('ts','desc'),F.limit(1000)),{includeMetadataChanges:true},
+      s=>cb(s.docs.map(d=>({id:d.id,...d.data()})), s.metadata.fromCache), err),
+    watchPlayers:cb=>F.onSnapshot(F.doc(fs,'config','players'),d=>cb(d.exists()?d.data():null),()=>{}),
+    add:async body=>{ const r=F.doc(col); await F.setDoc(r,body); return r.id; },
+    del:id=>F.deleteDoc(F.doc(fs,'matches',id)),
+    setPlayers:list=>F.setDoc(F.doc(fs,'config','players'),{list})
+  };
+}
+async function claudeAdapter(){
+  const c = window.claude && claude.use ? await claude.use('db') : null;
+  if(!c) return null;
+  return {
+    watchMatches:(cb,err)=>c.collection('matches').orderBy('ts','desc').limit(1000)
+      .onSnapshot(s=>cb(s.docs.map(d=>({id:d.id,...d.data()})), s.metadata.fromCache), err),
+    watchPlayers:cb=>c.doc('config/players').onSnapshot(d=>cb(d.exists?d.data():null),()=>{}),
+    add:async body=>{ const r=c.collection('matches').doc(); await r.set(body); return r.id; },
+    del:id=>c.collection('matches').doc(id).delete(),
+    setPlayers:list=>c.doc('config/players').set({list})
+  };
+}
+
+async function initDb(){
+  let t = setTimeout(()=>{ if(dbState==='loading'){ dbState='slow'; renderRank(); } }, 10000);
+  try{ db = FIREBASE_CONFIG ? await firebaseAdapter() : await claudeAdapter(); }
+  catch(e){ db=null; }
+  if(!db){ clearTimeout(t); dbState='local'; loadLocalMatches(); renderAll(); return; }
+
+  db.watchMatches((list,fromCache)=>{
+    matches = list;
+    if(!fromCache){ clearTimeout(t); dbState='ok'; }
+    renderAll();
+  }, ()=>{ clearTimeout(t); dbState='local'; loadLocalMatches(); renderAll(); });
+
+  db.watchPlayers(d=>{
+    if(d && Array.isArray(d.list) && d.list.length) players = d.list.slice();
+    renderAll();
+  });
+}
+
+async function addMatch(m){
+  if(db && dbState!=='local'){
+    try{ m.id = await db.add(m); return m.id; }
+    catch(e){ showStatus('Não consegui salvar a partida no ranking. Tente de novo.'); return null; }
+  } else {
+    m.id = 'L'+Date.now(); matches.unshift(m); saveLocalMatches(); renderAll(); return m.id;
+  }
+}
+async function removeMatch(id){
+  if(!id) return;
+  if(db && dbState!=='local'){
+    try{ await db.del(id); }catch(e){ showStatus('Não consegui apagar. Tente de novo.'); }
+  } else { matches = matches.filter(m=>m.id!==id); saveLocalMatches(); renderAll(); }
+}
+async function savePlayers(){
+  if(db && dbState!=='local'){
+    try{ await db.setPlayers(players); }catch(e){}
+  } else saveLocalMatches();
+}
+
+let statusMsg='';
+function showStatus(m){ statusMsg=m; renderRank(); setTimeout(()=>{statusMsg='';renderRank();},5000); }
+
+// ---------- partida ----------
+const board = document.getElementById('board');
+
+function sticksSVG(n){
+  const groups=[]; let left=n;
+  while(left>0){ groups.push(Math.min(5,left)); left-=5; }
+  return groups.map(g=>{
+    const c='#f4ecd8', w=2.6, cap='stroke-linecap="round"';
+    const L=[
+      `<line x1="4" y1="4" x2="4" y2="22" stroke="${c}" stroke-width="${w}" ${cap}/>`,
+      `<line x1="4" y1="22" x2="22" y2="22" stroke="${c}" stroke-width="${w}" ${cap}/>`,
+      `<line x1="22" y1="22" x2="22" y2="4" stroke="${c}" stroke-width="${w}" ${cap}/>`,
+      `<line x1="22" y1="4" x2="4" y2="4" stroke="${c}" stroke-width="${w}" ${cap}/>`,
+      `<line x1="4" y1="4" x2="22" y2="22" stroke="#e2483d" stroke-width="${w}" ${cap}/>`
+    ];
+    return `<svg viewBox="0 0 26 26">${L.slice(0,g).join('')}</svg>`;
+  }).join('');
+}
+
+function headToHead(){
+  const k0=pairKey(game.teams[0]), k1=pairKey(game.teams[1]);
+  let w=[0,0];
+  matches.forEach(m=>{
+    const ka=pairKey(m.a), kb=pairKey(m.b);
+    if(ka===k0&&kb===k1) w[m.winner===0?0:1]++;
+    else if(ka===k1&&kb===k0) w[m.winner===0?1:0]++;
+  });
+  return w;
+}
+
+function renderBoard(){
+  board.innerHTML='';
+  const h=headToHead();
+  [0,1].forEach(i=>{
+    const other=1-i;
+    const t=document.createElement('section');
+    t.className='team'+(game.score[i]>game.score[other]?' lead':'');
+    t.innerHTML=`
+      <button class="pick" aria-label="Escolher dupla">${esc(teamLabel(game.teams[i]))}<small>TROCAR DUPLA ✎</small></button>
+      <div class="h2h">${(h[0]+h[1])?`Neste confronto: <b>${h[i]}</b> vitória${h[i]===1?'':'s'}`:'&nbsp;'}</div>
+      <button class="score-tap" aria-label="Somar 1 ponto">
+        <div class="score" id="s${i}">${game.score[i]}</div>
+        <div class="hint">TOQUE +1</div>
+      </button>
+      <div class="sticks">${sticksSVG(game.score[i])}</div>
+      <div class="btns">
+        <button class="btn t3" data-p="3">+3<small>TRUCO</small></button>
+        <button class="btn t6" data-p="6">+6<small>SEIS</small></button>
+        <button class="btn t9" data-p="9">+9<small>NOVE</small></button>
+        <button class="btn t12" data-p="12">+12<small>DOZE</small></button>
+        <button class="btn minus" data-p="-1">−1 ponto</button>
+      </div>`;
+    t.querySelector('.pick').addEventListener('click',()=>openPicker(i));
+    t.querySelector('.score-tap').addEventListener('click',()=>add(i,1));
+    t.querySelectorAll('.btn').forEach(b=>b.addEventListener('click',()=>add(i,+b.dataset.p)));
+    board.appendChild(t);
+  });
+  document.getElementById('undo').disabled = history.length===0 && !lastSavedId;
+  updateBanner();
+}
+
+function updateBanner(){
+  const b=document.getElementById('banner');
+  const [a,c]=game.score;
+  if(a===11&&c===11){ b.textContent='MÃO DE FERRO! Os dois com 11, jogam no escuro'; b.classList.add('show'); }
+  else if(a===11||c===11){ b.textContent=`MÃO DE ONZE para ${teamLabel(game.teams[a===11?0:1])}: decidem se jogam`; b.classList.add('show'); }
+  else b.classList.remove('show');
+}
+
+let lastSavedId=null;
+
+function add(i,p){
+  const before=game.score[i];
+  const next=Math.max(0,Math.min(MAX,before+p));
+  if(next===before) return;
+  snap(); lastSavedId=null;
+  game.score[i]=next;
+  saveGame(); renderBoard(); buzz(p>0?15:8);
+  const el=document.getElementById('s'+i); el.classList.add('bump'); setTimeout(()=>el.classList.remove('bump'),150);
+  if(next>=MAX) win(i);
+}
+
+async function win(i){
+  buzz([40,60,40]);
+  const label=teamLabel(game.teams[i]);
+  document.getElementById('winTitle').textContent = label+' venceu!';
+  document.getElementById('winText').textContent = `Placar: ${game.score[0]} × ${game.score[1]} · Salvando no ranking…`;
+  document.getElementById('winModal').classList.add('show');
+  const m={a:[...game.teams[0]], b:[...game.teams[1]], sa:game.score[0], sb:game.score[1], winner:i, ts:Date.now()};
+  lastSavedId = await addMatch(m);
+  document.getElementById('winText').textContent = `Placar: ${game.score[0]} × ${game.score[1]}` + (lastSavedId?' · Registrado no ranking ✓':' · Não foi salvo no ranking');
+}
+
+async function undo(){
+  if(lastSavedId){ const id=lastSavedId; lastSavedId=null; await removeMatch(id); }
+  if(!history.length){ renderBoard(); return; }
+  game=JSON.parse(history.pop()); saveGame(); renderBoard(); buzz(8);
+}
+
+function newGame(){ snap(); lastSavedId=null; game.score=[0,0]; saveGame(); renderBoard(); }
+
+// ---------- escolher dupla ----------
+let pickingTeam=0;
+function openPicker(i){
+  pickingTeam=i;
+  document.getElementById('pickTitle').textContent = i===0?'Dupla da esquerda':'Dupla da direita';
+  renderChips();
+  document.getElementById('pickModal').classList.add('show');
+}
+function renderChips(){
+  const box=document.getElementById('chips'); box.innerHTML='';
+  const mine=game.teams[pickingTeam], theirs=game.teams[1-pickingTeam];
+  players.forEach(p=>{
+    const b=document.createElement('button');
+    const on=mine.includes(p), taken=theirs.includes(p);
+    b.className='chip'+(on?' on':'');
+    b.innerHTML=esc(p)+(taken?'<small>outra dupla</small>':'');
+    b.onclick=()=>{
+      snap();
+      if(on){ game.teams[pickingTeam]=mine.filter(x=>x!==p); }
+      else{
+        if(taken) game.teams[1-pickingTeam]=theirs.filter(x=>x!==p);
+        const t=[...game.teams[pickingTeam], p];
+        game.teams[pickingTeam]=t.slice(-2);
+      }
+      saveGame(); renderChips(); renderBoard();
+    };
+    box.appendChild(b);
+  });
+}
+document.getElementById('addBtn').onclick=async()=>{
+  const inp=document.getElementById('newName'); const n=inp.value.trim();
+  if(!n || players.some(p=>p.toLowerCase()===n.toLowerCase())) { inp.value=''; return; }
+  players=[...players,n]; inp.value=''; renderChips(); await savePlayers();
+};
+document.getElementById('newName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('addBtn').click(); });
+document.getElementById('pickDone').onclick=()=>document.getElementById('pickModal').classList.remove('show');
+
+document.getElementById('shuffle').onclick=()=>{
+  const pool=[...new Set([...game.teams[0],...game.teams[1]])];
+  const src = pool.length===4 ? pool : players.slice(0,4);
+  if(src.length<4) return;
+  // escolhe um parceiro diferente do atual para o primeiro jogador
+  const first=src[0];
+  const currentPartner = (game.teams.find(t=>t.includes(first))||[]).find(x=>x!==first);
+  const options=src.slice(1).filter(x=>x!==currentPartner);
+  const partner=options[Math.floor(Math.random()*options.length)] || src[1];
+  const rest=src.filter(x=>x!==first&&x!==partner);
+  snap(); game.teams=[[first,partner],rest]; saveGame(); renderBoard(); buzz(20);
+};
+
+// ---------- ranking ----------
+function stats(){
+  const P={}, D={};
+  players.forEach(p=>P[p]={w:0,l:0});
+  matches.forEach(m=>{
+    const W = m.winner===0?m.a:m.b, L = m.winner===0?m.b:m.a;
+    W.forEach(p=>{ (P[p]=P[p]||{w:0,l:0}).w++; });
+    L.forEach(p=>{ (P[p]=P[p]||{w:0,l:0}).l++; });
+    const kw=pairKey(W), kl=pairKey(L);
+    (D[kw]=D[kw]||{w:0,l:0}).w++;
+    (D[kl]=D[kl]||{w:0,l:0}).l++;
+  });
+  const sort = o => Object.entries(o).map(([k,v])=>({k,...v,n:v.w+v.l,pct:(v.w+v.l)?v.w/(v.w+v.l):0}))
+    .sort((a,b)=> b.w-a.w || b.pct-a.pct || a.l-b.l || a.k.localeCompare(b.k));
+  return {players:sort(P), duos:sort(D).filter(d=>d.n>0)};
+}
+
+function rowsHTML(list){
+  if(!list.length) return '<div class="empty">Nenhuma partida ainda. Termine uma partida e ela aparece aqui.</div>';
+  return list.map((r,idx)=>`
+    <div class="row${idx===0&&r.w>0?' first':''}">
+      <div class="pos">${idx===0&&r.w>0?'♛':idx+1}</div>
+      <div><div class="who">${esc(r.k)}</div><div class="bar"><i style="width:${Math.round(r.pct*100)}%"></i></div></div>
+      <div class="stat"><b>${r.w}</b> V · ${r.l} D<br>${r.n?Math.round(r.pct*100)+'%':'–'}</div>
+    </div>`).join('');
+}
+
+function fmtDate(ts){
+  try{ return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; }
+}
+
+function renderRank(){
+  const box=document.getElementById('rank');
+  const s=stats();
+  const st = dbState==='loading' ? '<div class="status">Carregando ranking…</div>'
+    : dbState==='slow' ? '<div class="status warn">O ranking está demorando para carregar. Pode estar desatualizado.</div>'
+    : dbState==='local' ? '<div class="status warn">Ranking salvo só neste aparelho.</div>' : '';
+  const recent=matches.slice(0,15);
+  box.innerHTML = `
+    ${statusMsg?`<div class="status warn">${esc(statusMsg)}</div>`:''}${st}
+    <div class="panel"><h3>Jogadores <small>${matches.length} partida${matches.length===1?'':'s'}</small></h3>${rowsHTML(s.players.filter(p=>p.n>0||players.includes(p.k)))}</div>
+    <div class="panel"><h3>Duplas</h3>${s.duos.length?rowsHTML(s.duos):'<div class="empty">As duplas aparecem depois da primeira partida.</div>'}</div>
+    <div class="panel"><h3>Últimas partidas</h3>${recent.length?recent.map(m=>{
+      const W=m.winner===0?m.a:m.b, L=m.winner===0?m.b:m.a;
+      const sw=m.winner===0?m.sa:m.sb, sl=m.winner===0?m.sb:m.sa;
+      return `<div class="match"><div class="m"><span class="w">${esc(teamLabel(W))} ${sw}</span> × <span class="l">${sl} ${esc(teamLabel(L))}</span><div class="d">${fmtDate(m.ts)}</div></div>
+        <button class="del" data-id="${esc(m.id)}" aria-label="Apagar partida">×</button></div>`;
+    }).join(''):'<div class="empty">Nenhuma partida registrada.</div>'}</div>`;
+  box.querySelectorAll('.del').forEach(b=>b.onclick=()=>confirmBox('Apagar partida?','Ela sai do ranking de todo mundo.',()=>removeMatch(b.dataset.id)));
+}
+
+function renderAll(){ renderBoard(); renderRank(); }
+
+// ---------- confirmação ----------
+let confCb=null;
+function confirmBox(title,text,cb){
+  document.getElementById('confTitle').textContent=title;
+  document.getElementById('confText').textContent=text;
+  confCb=cb; document.getElementById('confModal').classList.add('show');
+}
+document.getElementById('confNo').onclick=()=>{ confCb=null; document.getElementById('confModal').classList.remove('show'); };
+document.getElementById('confYes').onclick=()=>{ const cb=confCb; confCb=null; document.getElementById('confModal').classList.remove('show'); cb&&cb(); };
+
+// ---------- navegação ----------
+function tab(which){
+  document.getElementById('tabGame').classList.toggle('on',which==='game');
+  document.getElementById('tabRank').classList.toggle('on',which==='rank');
+  document.getElementById('vGame').classList.toggle('on',which==='game');
+  document.getElementById('vRank').classList.toggle('on',which==='rank');
+  if(which==='rank') renderRank();
+}
+document.getElementById('tabGame').onclick=()=>tab('game');
+document.getElementById('tabRank').onclick=()=>tab('rank');
+document.getElementById('undo').onclick=undo;
+document.getElementById('winUndo').onclick=()=>{ document.getElementById('winModal').classList.remove('show'); undo(); };
+document.getElementById('winNext').onclick=()=>{ document.getElementById('winModal').classList.remove('show'); newGame(); };
+document.getElementById('resetGame').onclick=()=>confirmBox('Zerar partida?','O placar volta para 0 × 0. O ranking não muda.',newGame);
+
+renderAll();
+initDb();
+</script>
+</body>
+</html>

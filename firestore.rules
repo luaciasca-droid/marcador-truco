@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Partidas: qualquer pessoa com o link pode ler, registrar e apagar
+    match /matches/{id} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.data.keys().hasAll(['a','b','sa','sb','winner','ts'])
+        && request.resource.data.sa is int && request.resource.data.sb is int
+        && request.resource.data.sa <= 12 && request.resource.data.sb <= 12;
+    }
+    // Lista de jogadores
+    match /config/players {
+      allow read: if true;
+      allow write: if request.resource.data.list is list && request.resource.data.list.size() <= 30;
+    }
+  }
+}
